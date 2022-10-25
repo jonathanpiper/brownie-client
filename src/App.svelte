@@ -275,8 +275,6 @@
 				<div id="levels-slider" />
 				<div class="flex p-4 h-full">
 					<LevelSliders levelMin={state.level_min} levelMax={state.level_max} on:change={setLevels} />
-					<!-- <input type="range" id="min-level-slider" class="level-slider self-end w-[42rem]" bind:value={state.level_min} max="100" min="0" on:change={setLevelMin} on:input={checkMinLevel} />
-					<input type="range" id="max-level-slider" class="level-slider self-end w-[42rem]" bind:value={state.level_max} max="100" min="0" on:change={setLevelMax} on:input={checkMaxLevel} /> -->
 				</div>
 				<div class="flex level-inputs-container w-32 text-right">
 					<div class="self-start absolute">
@@ -301,7 +299,6 @@
 					<p class="">Smart Volume Offset</p>
 					<p class="justify-self-end">{roundNumber((state.smvol_register / 255) * 40.2 - 20.1, 1)} dB</p>
 				</div>
-				<!-- <input type="range" id="smvol-slider" class="my-4" bind:value={state.smvol_register} on:change={setSMVol} max="255" /> -->
 				<Slider register={state.smvol_register} on:change={setSMVol} />
 				<p class="text-sm">The Smart Volume Offset adjusts the Audio Output to be louder or quieter than the Ambient Level.</p>
 			</div>
@@ -310,7 +307,6 @@
 					<p class="">Ambient Response Time</p>
 					<p class="justify-self-end">{state.response_time / 10} dB/sec</p>
 				</div>
-				<!-- <input type="range" id="smvol-slider" class="my-4" bind:value={state.response_time} on:change={setResponseTime} max="255" /> -->
 				<Slider register={state.response_time} on:change={setResponseTime} />
 				<p class="text-sm">The Ambient Response Time measures how quickly the Ambient Level will match the Microphone Level.</p>
 			</div>
@@ -332,48 +328,8 @@
 	.container {
 		margin: 0 auto;
 	}
-	.level-slider {
-		margin-top: 30px;
-		margin-left: 0px;
-		/* //width: 50%; */
-		position: absolute;
-		pointer-events: none;
-	}
-	input[type='range'] {
-		border: 0;
-		height: 2px;
-		background-color: rgba(0, 0, 0, 0.2);
-	}
-	.inputs-container input[type='range'] {
-		background-color: rgba(0, 0, 0, 0.1);
-		transform: translate(-50%, -50%) rotate(-90deg);
-	}
-	input[type='range']::-webkit-slider-thumb {
-		-webkit-appearance: none;
-		pointer-events: all;
-		width: 16px;
-		height: 16px;
-		cursor: pointer;
-		background: rgba(16, 124, 216, 0.8) !important;
-	}
-	input[type='range']::-moz-range-thumb {
-		pointer-events: all;
-		width: 16px;
-		height: 16px;
-		cursor: pointer;
-		background: rgba(16, 124, 216, 0.8) !important;
-	}
-	#min-level-slider {
-		z-index: 1;
-	}
-	#min-level-slider::-webkit-slider-thumb {
-		color: rgba(16, 124, 216, 0.8);
-	}
 	.smvol-response-inputs {
 		margin-left: 14px;
 		padding: 0 20px;
-	}
-	.smvol-response-inputs input {
-		width: 100%;
 	}
 </style>
