@@ -2,9 +2,15 @@
 	import TailwindCss from './TailwindCSS.svelte';
 	import { Line } from 'svelte-chartjs';
 	import { Chart, Title, Tooltip, Legend, BarElement, CategoryScale, LineElement, LinearScale, PointElement } from 'chart.js';
+	// import Nouislider from '@jbfulgencio/svelte-nouislider';
 	Chart.register(Title, Tooltip, Legend, BarElement, CategoryScale, LineElement, LinearScale, PointElement);
+	import { onMount, afterUpdate } from 'svelte';
+	import LevelSliders from './LevelSliders.svelte';
+	import Slider from './Slider.svelte';
 
-	var hostIP = '192.168.168.223';
+	var hostIP = '192.168.168.171';
+
+	var windowWidth, windowHeight;
 
 	const socket = new WebSocket(`ws://${hostIP}:8080`);
 
@@ -62,22 +68,8 @@
 			if (myriadChartData.datasets[i].data.length > displayLength) {
 				myriadChartData.datasets[i].data.shift();
 			}
-			//console.log(myriadChartData.datasets[i].data);
 		}
-		// = [wsData.cur_mic, wsData.cur_amb, wsData.cur_input, wsData.cur_output, wsData.volpot_register / 40.95];
 	});
-
-	// var myriadChartData = {
-	// 	labels: ['Current volume', 'Current ambient', 'Current input', 'Current output', 'Volume knob value'],
-	// 	datasets: [
-	// 		{
-	// 			data: [],
-	// 			backgroundColor: ['rgba(255, 134,159,1)'],
-	// 			borderColor: ['rgba(255, 134, 159, 1)'],
-	// 			borderWidth: 1,
-	// 		},
-	// 	],
-	// };
 
 	var myriadChartData = {
 		labels: [],
@@ -145,7 +137,7 @@
 	function myriadLoop() {
 		setTimeout(() => {
 			getMyriad(), myriadLoop();
-		}, 50);
+		}, 100);
 	}
 
 	for (let i = 0; i < displayLength; i++) {
@@ -156,36 +148,61 @@
 	}
 
 	function checkMinLevel() {
-		const minSlider = document.querySelector('#min-level-slider');
-		const maxSlider = document.querySelector('#max-level-slider');
-		if (Number(minSlider.value) >= Number(maxSlider.value)) {
-			minSlider.value = maxSlider.value;
-			state.level_min = minSlider.value;
+		const minInput = document.querySelector('#input-level-min');
+		const maxInput = document.querySelector('#input-level-max');
+		if (Number(minInput.value) >= Number(maxInput.value)) {
+			minInput.value = maxInput.value;
+			state.level_min = minInput.value;
 		}
 	}
 
 	function checkMaxLevel() {
-		const minSlider = document.querySelector('#min-level-slider');
-		const maxSlider = document.querySelector('#max-level-slider');
-		if (Number(minSlider.value) >= Number(maxSlider.value)) {
-			maxSlider.value = minSlider.value;
-			state.level_max = maxSlider.value;
+		const minInput = document.querySelector('#input-level-min');
+		const maxInput = document.querySelector('#input-level-max');
+		if (Number(minInput.value) >= Number(maxInput.value)) {
+			maxInput.value = minInput.value;
+			state.level_max = maxInput.value;
 		}
 	}
 
-	function setLevelMin() {
+	function sendLevelMin() {
 		socket.send(JSON.stringify({ set: 'levelmin_' + roundNumber(state.level_min * 2.55, 0) }));
 	}
 
-	function setLevelMax() {
+	function sendLevelMax() {
 		socket.send(JSON.stringify({ set: 'levelmax_' + roundNumber(state.level_max * 2.55, 0) }));
 	}
 
-	function setSMVol() {
+	function setLevels(event) {
+		if (state.level_min != event.detail.values[0]) {
+			state.level_min = event.detail.values[0];
+			sendLevelMin();
+		}
+		if (state.level_max != event.detail.values[1]) {
+			state.level_max = event.detail.values[1];
+			sendLevelMax();
+		}
+	}
+
+	function setSMVol(event) {
+		if (state.smvol_register != event.detail.values) {
+			state.smvol_register = event.detail.values;
+			sendSMVol();
+		}
+	}
+
+	function sendSMVol() {
 		socket.send(JSON.stringify({ set: 'smvol_' + state.smvol_register }));
 	}
 
-	function setResponseTime() {
+	function setResponseTime(event) {
+		if (state.response_time != event.detail.values) {
+			state.response_time = event.detail.values;
+			sendResponseTime();
+		}
+	}
+
+	function sendResponseTime() {
 		socket.send(JSON.stringify({ set: 'responsetime_' + state.response_time }));
 	}
 
@@ -195,7 +212,10 @@
 		var newnumber = Math.round(rnum * Math.pow(10, rlength)) / Math.pow(10, rlength);
 		return newnumber;
 	}
+
 </script>
+
+<svelte:window bind:innerHeight={windowHeight} bind:innerWidth={windowWidth} />
 
 <TailwindCss />
 <div class="container grid grid-rows-8 w-full h-[60rem]">
@@ -203,71 +223,72 @@
 	<p class="text-xl">A better way to interact with Brown Myriad amplifiers.</p> -->
 	<div class="grid grid-cols-12 row-span-7">
 		<div class="col-span-11">
-		<Line
-			data={myriadChartData}
-			updateMode={'none'}
-			options={({ responsive: true },
-			{ animation: { duration: 0 } },
-			{
-				scales: {
-					x: { ticks: { display: false } },
-					ydBV: {
-						title: {
-							display: true,
-							text: 'dBV',
-							align: 'end',
-						},
-						type: 'linear',
-						max: 100,
-						min: 0,
-						ticks: {
-							min: 0,
+			<Line
+				data={myriadChartData}
+				updateMode={'none'}
+				options={({ animation: { duration: 0 } },
+				{
+					scales: {
+						x: { ticks: { display: false } },
+						ydBV: {
+							title: {
+								display: true,
+								text: 'dBV',
+								align: 'end',
+							},
+							type: 'linear',
 							max: 100,
-							stepSize: 12.5,
-							callback: (value) => value * 0.8 - 70,
+							min: 0,
+							ticks: {
+								min: 0,
+								max: 100,
+								stepSize: 12.5,
+								callback: (value) => value * 0.8 - 70,
+							},
+						},
+						ydBSPL: {
+							title: {
+								display: true,
+								text: 'dB SPL',
+								align: 'end',
+							},
+							type: 'linear',
+							max: 100,
+							min: 0,
+							position: 'right',
+							gridLines: {
+								display: false,
+							},
+							ticks: {
+								min: 0,
+								max: 100,
+								stepSize: 12.5,
+								callback: (value) => value * 0.8 + 35,
+							},
 						},
 					},
-					ydBSPL: {
-						title: {
-							display: true,
-							text: 'dB SPL',
-							align: 'end',
-						},
-						type: 'linear',
-						max: 100,
-						min: 0,
-						position: 'right',
-						gridLines: {
-							display: false,
-						},
-						ticks: {
-							min: 0,
-							max: 100,
-							stepSize: 12.5,
-							callback: (value) => value * 0.8 + 35,
-						},
-					},
-				},
-			})}
-		/>
+				})}
+			/>
 		</div>
 		<div class="flex">
 			<div class="h-full flex inputs-container items-start">
-				<div class="flex p-4 mt-[22rem]">
-					<input type="range" id="min-level-slider" class="level-slider self-end w-[42rem]" bind:value={state.level_min} max="100" min="0" on:change={setLevelMin} on:input={checkMinLevel} />
-					<input type="range" id="max-level-slider" class="level-slider self-end w-[42rem]" bind:value={state.level_max} max="100" min="0" on:change={setLevelMax} on:input={checkMaxLevel} />
+				<div id="levels-slider" />
+				<div class="flex p-4 h-full">
+					<LevelSliders levelMin={state.level_min} levelMax={state.level_max} on:change={setLevels} />
+					<!-- <input type="range" id="min-level-slider" class="level-slider self-end w-[42rem]" bind:value={state.level_min} max="100" min="0" on:change={setLevelMin} on:input={checkMinLevel} />
+					<input type="range" id="max-level-slider" class="level-slider self-end w-[42rem]" bind:value={state.level_max} max="100" min="0" on:change={setLevelMax} on:input={checkMaxLevel} /> -->
 				</div>
-				<div class="grid level-inputs-container w-32 text-right">
+				<div class="flex level-inputs-container w-32 text-right">
 					<div class="self-start absolute">
 						<p class="text-md w-full">Max level</p>
-						<input type="number" class="w-12" max="100" min="0" bind:value={state.level_max} on:input={checkMaxLevel} on:change={setLevelMax} />
+						<input type="number" class="w-12" id="input-level-max" max="100" min="0" bind:value={state.level_max} on:input={checkMaxLevel} on:change={sendLevelMax} />
 					</div>
 					<div class="self-center">
 						<p class="text-xs text-justify w-16 mt-8">These values represent the loudest and quitest possible output, not absolute levels.</p>
 					</div>
 					<div class="self-end absolute text-right">
 						<p class="text-md w-full">Min level</p>
-						<input type="number" class="w-12 justify-self-end" max="100" min="0" bind:value={state.level_min} on:input={checkMinLevel} on:change={setLevelMin} />
+						<input type="number" class="w-12 justify-self-end" id="input-level-min" max="100" min="0" bind:value={state.level_min} on:input={checkMinLevel} on:change={sendLevelMin} />
 					</div>
 				</div>
 			</div>
@@ -280,7 +301,8 @@
 					<p class="">Smart Volume Offset</p>
 					<p class="justify-self-end">{roundNumber((state.smvol_register / 255) * 40.2 - 20.1, 1)} dB</p>
 				</div>
-				<input type="range" id="smvol-slider" class="my-4" bind:value={state.smvol_register} on:change={setSMVol} max="255" />
+				<!-- <input type="range" id="smvol-slider" class="my-4" bind:value={state.smvol_register} on:change={setSMVol} max="255" /> -->
+				<Slider register={state.smvol_register} on:change={setSMVol} />
 				<p class="text-sm">The Smart Volume Offset adjusts the Audio Output to be louder or quieter than the Ambient Level.</p>
 			</div>
 			<div class="text-start flex-col justify-items-center">
@@ -288,7 +310,8 @@
 					<p class="">Ambient Response Time</p>
 					<p class="justify-self-end">{state.response_time / 10} dB/sec</p>
 				</div>
-				<input type="range" id="smvol-slider" class="my-4" bind:value={state.response_time} on:change={setResponseTime} max="255" />
+				<!-- <input type="range" id="smvol-slider" class="my-4" bind:value={state.response_time} on:change={setResponseTime} max="255" /> -->
+				<Slider register={state.response_time} on:change={setResponseTime} />
 				<p class="text-sm">The Ambient Response Time measures how quickly the Ambient Level will match the Microphone Level.</p>
 			</div>
 		</div>
@@ -301,8 +324,6 @@
 </div>
 
 <style>
-	.inputs-container {
-	}
 	.level-inputs-container {
 		margin-top: 28px;
 		margin-left: 10px;
